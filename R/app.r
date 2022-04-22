@@ -1,7 +1,13 @@
-library(shiny)
-
+#' SourceXplorer
+#'
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 SourceXplorer <- function (...) {
-
+library(shiny)
 library(rsconnect)
 library(tidyr)
 library(ggplot2)
