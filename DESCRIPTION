@@ -5,11 +5,50 @@ Authors@R:
     person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Depends: 
     R (>= 2.10)
 LazyData: true
+Imports: 
+    rsconnect,
+    tidyr,
+    shiny,
+    ggplot2,
+    plotly,
+    ggfortify,
+    leaflet,
+    leaflet.extras,
+    scales,
+    lattice,
+    plyr,
+    dplyr,
+    DT,
+    MASS,
+    caret,
+    stringr,
+    htmltools,
+    RColorBrewer,
+    readxl,
+    svglite,
+    ggiraph,
+    ggrepel,
+    shinythemes,
+    mapview,
+    ggcorrplot,
+    rcompanion,
+    DescTools,
+    cowplot,
+    shinyWidgets,
+    janitor,
+    ggpubr,
+    sp,
+    openxlsx,
+    shinyalert
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+URL: https://github.com/RhyMcMillan/SourceXplorer
+BugReports: https://github.com/RhyMcMillan/SourceXplorer/issues
