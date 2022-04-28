@@ -68,7 +68,7 @@ server <- function(input, output, session) {
   ###Unknowns###
   dataIn1 <- reactive({
     chem_data <- fread(input$file1$datapath)
-#    chem_data <- na.omit(chem_data)
+   chem_data <- na.omit(chem_data)
 
     return(chem_data)
   }) #close dataIn1
@@ -86,7 +86,6 @@ server <- function(input, output, session) {
     }
 
   })
-
 
   vars_selected <- reactive({
     vars_selected <- input$varSelect
@@ -116,13 +115,39 @@ server <- function(input, output, session) {
                                selected=vars_selected())
     })
 
+  catvars <- reactive({
+
+    if (is.null(input$file1)) {
+      return(NULL)
+    }
+
+    else if (!is.null(input$file1)) {
+      source_vars1 <- dataIn1()
+      source_vars <- dplyr::select_if(source_vars1, negate(is.numeric))
+      names(source_vars)
+    }
+
+  })
+
+  observe(if (!is.null(input$file1)) {
+    updateSelectInput(session,
+                      "selectAggVar",
+                      choices = catvars(),
+                      selected = c())
+  })
+
+
   trimmed <- reactive({
 
+    dataIn_selectedAll <- dataIn1() %>% select(input$varSelect)
 
-      dataIn <- dataIn1()[, input$varSelect]
+    dataIn_selectedID <- dataIn1() %>% select(input$selectAggVar)
+    colnames(dataIn_selectedID) <- "ID"
 
 
-      dataIn <- as.data.frame(dataIn)
+    dataIn_selected <- dplyr::bind_cols(dataIn_selectedID, dataIn_selectedAll)
+
+      dataIn <- as.data.frame(dataIn_selected)
       return(dataIn)
     })
 
@@ -154,26 +179,26 @@ server <- function(input, output, session) {
   ) #close output$table2
 
   agg <- reactive({
-    agg <- aggregate(trimmed()[,c(1:10)], by = list(trimmed()$ID), FUN = "mean")
-    agg <- dplyr::rename(agg, ID = Group.1)
+    agg <- aggregate(trimmed(), by = list(trimmed()$ID), FUN = "mean")
+    agg2 <- aggregate(trimmed(), by = list(trimmed()$ID), FUN = "sd")
+    agg$ID <- agg$Group.1
+    agg2$ID <- NULL
+    agg$Group.1 <- NULL
+    agg2$Group.1 <- NULL
+    agg2 <- agg2 %>% dplyr::rename_with( ~ paste0(.x, " 1SD"))
     agg <- agg %>%
       mutate_if(is.numeric, round, 3)
-    agg <- dplyr::left_join(agg, unique(trimmed()[,c("ID","info", "Project No.")]), by = "ID")
+    agg2 <- agg2 %>%
+      mutate_if(is.numeric, round, 3)
+
+    agg <- dplyr::bind_cols(agg, agg2)
 
     return(agg)
   }) #close agg
 
-  observe(
-    if (is.null(input$file1)){
-      return(NULL)}
-    else if(!is.null( dataIn1())){
-      updateSelectInput(session,
-                        "selectAggVar",
-                        choices = colnames(agg())[!grepl("Rb|Sr|Y|Zr|Nb|Si|Ti|Ca", colnames(agg())) ],
-                        selected = c("ID")
-      )
-    }
-  )
+
+
+
 
   output$table3 <- DT::renderDT(server = FALSE,{
 
