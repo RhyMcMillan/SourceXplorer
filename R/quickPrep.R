@@ -21,19 +21,18 @@ library(DT)
 ui <- fluidPage(
 
     # Application title
-    titlePanel("quickPrep: Quick Data Preparation for SourceXplorer"),
+    titlePanel("quickpRep: Quick Data Preparation for SourceXplorer"),
     sidebarPanel(
 
-    fileInput(inputId = "file1", label = "Upload CSV: Vanta chemistry output",
+    fileInput(inputId = "file1", label = "Upload CSV: Raw Data",
               multiple = FALSE,
               accept = c(".csv"),
               width = NULL,
               buttonLabel = "Browse...",
               placeholder = "No file selected"),
-
-    checkboxInput("exclude2711a", "Exclude NIST callibration samples", TRUE),
-
+    h3("Select Variables"),
     selectInput("selectAggVar", "Trimmed Data ID Variable", choices=c()),
+    checkboxGroupInput(inputId = "varSelect", "Available Variables:", ""),
 
     fileInput(inputId = "file2", label = "Upload CSV: Artifact Catalogue",
               multiple = FALSE,
@@ -71,18 +70,28 @@ server <- function(input, output, session) {
     chem_data <- fread(input$file1$datapath)
 #    chem_data <- na.omit(chem_data)
 
-    if(
-       input$exclude2711a == TRUE
-    ){
-      chem_data <- subset(chem_data,
-                         chem_data$`Sample ID` != "2711a" &
-                           chem_data$Notes != "2711a" &
-                           chem_data$`Sample ID` != "2710a" &
-                           chem_data$Notes != "2710a")
-    }
-
     return(chem_data)
   }) #close dataIn1
+
+  vars <- reactive({
+
+    if (is.null(input$file1)) {
+      return(NULL)
+    }
+
+    else if (!is.null(input$file1)) {
+      source_vars1 <- dataIn1()
+      source_vars <- dplyr::select_if(source_vars1, is.numeric)
+      names(source_vars)
+    }
+
+  })
+
+
+  vars_selected <- reactive({
+    vars_selected <- input$varSelect
+    return(vars_selected)
+  })
 
   output$table1 <- DT::renderDT(server = FALSE,{
 
@@ -97,98 +106,28 @@ server <- function(input, output, session) {
     }
   }) #close output$table1
 
+  observeEvent(
+    input$file1,
+    {
+
+      updateCheckboxGroupInput(session,
+                               "varSelect",
+                               choices = vars(),
+                               selected=vars_selected())
+    })
 
   trimmed <- reactive({
 
-    if("Latitude" %in% colnames(dataIn1() ))
-      {
 
-    trimmed <- dataIn1()[,c(
-      "Latitude",
-      "Longitude",
-      "Rb Concentration",
-      "Sr Concentration",
-      "Y Concentration",
-      "Zr Concentration",
-      "Nb Concentration",
-      "Ti Concentration",
-      "Ca Concentration",
-      "Si Concentration",
-      "Notes",
-      "Sample ID",
-      "Project No." )]
+      dataIn <- dataIn1()[, input$varSelect]
 
-    trimmed <- dplyr::rename( trimmed,
-                              latitude = Latitude,
-                              longitude = Longitude,
-                              info = Notes,
-                              ID = `Sample ID`,
-                              #"Project No." = `Project No`,
-                              Rb = `Rb Concentration`,
-                              Sr = `Sr Concentration`,
-                              Y = `Y Concentration`,
-                              Zr = `Zr Concentration`,
-                              Nb = `Nb Concentration`,
-                              Si = `Si Concentration`,
-                              Ti = `Ti Concentration`,
-                              Ca = `Ca Concentration`
-    )
-    trimmed$latitude[is.na(trimmed$latitude)] <- 0
-    trimmed$longitude[is.na(trimmed$longitude)] <- 0
-    trimmed[trimmed == "<LOD"] <- 0
-    trimmed$Rb <- as.numeric(trimmed$Rb)
-    trimmed$Sr <- as.numeric(trimmed$Sr)
-    trimmed$Y <- as.numeric(trimmed$Y)
-    trimmed$Zr <- as.numeric(trimmed$Zr)
-    trimmed$Nb <- as.numeric(trimmed$Nb)
-    trimmed$Si <- as.numeric(trimmed$Si)
-    trimmed$Ca <- as.numeric(trimmed$Ca)
-    trimmed$Ti <- as.numeric(trimmed$Ti)
-    }
 
-    else if ( !("Latitude" %in% dataIn1() )){
+      dataIn <- as.data.frame(dataIn)
+      return(dataIn)
+    })
 
-      trimmed <- dataIn1()[,c(
-        "Rb Concentration",
-        "Sr Concentration",
-        "Y Concentration",
-        "Zr Concentration",
-        "Nb Concentration",
-        "Ti Concentration",
-        "Ca Concentration",
-        "Si Concentration",
-        "Notes",
-        "Sample ID",
-        "Project No." )]
 
-      trimmed <- dplyr::rename( trimmed,
-                                info = Notes,
-                                ID = `Sample ID`,
-                                #"Project No." = `Project No`,
-                                Rb = `Rb Concentration`,
-                                Sr = `Sr Concentration`,
-                                Y = `Y Concentration`,
-                                Zr = `Zr Concentration`,
-                                Nb = `Nb Concentration`,
-                                Si = `Si Concentration`,
-                                Ti = `Ti Concentration`,
-                                Ca = `Ca Concentration`
-      )
 
-      trimmed[trimmed == "<LOD"] <- 0
-      trimmed$Rb <- as.numeric(trimmed$Rb)
-      trimmed$Sr <- as.numeric(trimmed$Sr)
-      trimmed$Zr <- as.numeric(trimmed$Zr)
-      trimmed$Y <- as.numeric(trimmed$Y)
-      trimmed$Nb <- as.numeric(trimmed$Nb)
-      trimmed$Si <- as.numeric(trimmed$Si)
-      trimmed$Ca <- as.numeric(trimmed$Ca)
-      trimmed$Ti <- as.numeric(trimmed$Ti)
-
-    } #close else if
-
-    return(trimmed)
-  }) #trimmed
 
   output$table2 <- DT::renderDT(server = FALSE,{
 
@@ -301,16 +240,6 @@ server <- function(input, output, session) {
       updatedCat$ArtifactVar <- sprintf("%03d", updatedCat$ArtifactVar)
 
       updatedCat$ID <- paste0(updatedCat$SiteVar, ":", updatedCat$ArtifactVar)
-
-      # updatedCat$ID <- paste(
-      #   updatedCat[colnames( dataIn2()[,input$selectSiteVar])],
-      #   str_pad(
-      #     updatedCat[colnames(dataIn2()[,input$selectArtifactVar])],
-      #     3,
-      #     pad = 0
-      #   ),
-      #   sep = ":"
-      # )
 
       return(updatedCat )
     }
