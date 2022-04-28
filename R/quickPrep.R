@@ -14,12 +14,13 @@ library(shinyWidgets)
 library(tidyverse)
 library(data.table)
 library(DT)
-
+library(shinyalert)
+library(shinythemes)
 
 ####UI####
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-
+  theme = shinytheme("sandstone"),
     # Application title
     titlePanel("quickpRep: Quick Data Preparation for SourceXplorer"),
     sidebarPanel(
@@ -30,7 +31,7 @@ ui <- fluidPage(
               width = NULL,
               buttonLabel = "Browse...",
               placeholder = "No file selected"),
-    h3("Select Variables"),
+    h3("Select Numeric Variables"),
     selectInput("selectAggVar", "Trimmed Data ID Variable", choices=c()),
     checkboxGroupInput(inputId = "varSelect", "Available Variables:", ""),
 
@@ -41,10 +42,8 @@ ui <- fluidPage(
               buttonLabel = "Browse...",
               placeholder = "No file selected"),
 
-    selectInput("selectSiteVar", "Catalogue Site ID", choices=c()),
     selectInput("selectArtifactVar", "Catalogue Artifact ID", choices=c()),
-    actionButton("button1", "Create artifact ID"),
-    actionButton("button2", "Merge Data")
+    actionButton("button1", "Merge Data")
 
     ),
     mainPanel(
@@ -60,7 +59,7 @@ ui <- fluidPage(
 )
 
 ####Server####
-# Define server logic required to draw a histogram
+
 server <- function(input, output, session) {
 
 
@@ -68,10 +67,18 @@ server <- function(input, output, session) {
   ###Unknowns###
   dataIn1 <- reactive({
     chem_data <- fread(input$file1$datapath)
-   chem_data <- na.omit(chem_data)
+
 
     return(chem_data)
   }) #close dataIn1
+
+
+  observeEvent(input$file1, {
+    shinyalert( html = TRUE, title = "Numerical Data Uploaded.",
+                text = HTML( "Note that any incomplete rows will not be removed prior to use in quickpRep, which may affect your basic statistics. <br><br>
+                              You can see your processed data in the 'Trimmed data' and 'Averaged value data' tabs.<br><br>
+                              Note that any rows containing non-numeric strings (e.g., LOD) will not be available for processing. <br><br>
+                                If you had already uploaded a file here, please restart before uploading another." )) })
 
   vars <- reactive({
 
@@ -220,28 +227,21 @@ server <- function(input, output, session) {
   ) #close output$table3
 
   dataIn2 <- reactive({
-    if(is.null(input$file2)){return(NULL)}
-    else if(!is.null(input$file2)){
-    cat_data <- read.csv(input$file2$datapath,
-                         check.names=FALSE,
-                         na.strings=c(""," ","NA")
-                         )
+
+    cat_data <- fread(input$file2$datapath)
 
     return(cat_data)
-    }
+
   }) #close dataIn2
 
-  observe(
-    if (is.null(input$file2)){
-      return(NULL)}
-    else if(!is.null( dataIn2())){
-      updateSelectInput(session,
-                        "selectSiteVar",
-                        choices = colnames(dataIn2()),
-                        selected = c()
-      )
-    }
-  )
+  observeEvent(input$file2, {
+    shinyalert( html = TRUE, title = "Metadata Uploaded.",
+                text = HTML( "Note that any incomplete rows will not be removed prior to use in quickpRep, which may affect your basic statistics. <br><br>
+                              You can see your processed data in the 'Trimmed data' and 'Averaged value data' tabs.<br><br>
+                              Note that any rows containing non-numeric strings (e.g., LOD) will not be available for processing. <br><br>
+                               To merge your numeric and metadata, make sure your selected ID columns in both datasets match. <br><br>
+                                If you had already uploaded a file here, please restart before uploading another." )) })
+
   observe(
     if (is.null(input$file2)){
       return(NULL)}
@@ -254,21 +254,20 @@ server <- function(input, output, session) {
     }
   )
 
-  updatedCat <- eventReactive(input$button1,{
+  trimmed_cat <- reactive({
 
-    if (is.null(dataIn2())){return(NULL)}
+    dataIn2_selectedAll <- dataIn2()
 
-    else if (!is.null(dataIn2() )){
-      updatedCat <- as.data.frame(dataIn2())
-      updatedCat$SiteVar <- dataIn2()[, input$selectSiteVar]
-      updatedCat$ArtifactVar <- dataIn2()[, input$selectArtifactVar]
-      updatedCat$ArtifactVar <- sprintf("%03d", updatedCat$ArtifactVar)
+    dataIn2_selectedID <- dataIn2() %>% select(input$selectArtifactVar)
+    colnames(dataIn2_selectedID) <- "ID"
 
-      updatedCat$ID <- paste0(updatedCat$SiteVar, ":", updatedCat$ArtifactVar)
 
-      return(updatedCat )
-    }
-  }) #close mergedData
+    dataIn2_selected <- dplyr::bind_cols(dataIn2_selectedID, dataIn2_selectedAll)
+
+    dataIn2 <- as.data.frame(dataIn2_selected)
+    return(dataIn2)
+  })
+
 
   output$table4 <- DT::renderDT(server = FALSE,{
 
@@ -276,7 +275,7 @@ server <- function(input, output, session) {
       return(NULL)}
     else if (!is.null(dataIn2()) ){
         return(
-          DT::datatable(  updatedCat(),
+          DT::datatable(  trimmed_cat(),
                           filter = "top",
                           rownames= FALSE,
                           extensions = 'Buttons',
@@ -289,15 +288,23 @@ server <- function(input, output, session) {
   }) #close output$table4
 
 
-    mergedData <- eventReactive(input$button2,{
-      if (is.null( updatedCat() )){return(NULL)}
 
-      else if (!is.null(updatedCat())){
-        mergedDF <- agg() %>%left_join(updatedCat(), by = c("ID"))
+    mergedData <- eventReactive(input$button1,{
+
+
+      if (is.null( trimmed_cat() )){return(NULL)}
+
+      else if (!is.null(trimmed_cat())){
+        mergedDF <- agg() %>% left_join(trimmed_cat(), by = c("ID"))
         mergedDF <- mergedDF %>% replace(is.na(.), "N/A")
         return(mergedDF)
       }
     }) #close mergedData
+
+    observeEvent(input$button1, {
+      shinyalert( html = TRUE, title = "Data Merged.",
+                  text = HTML( "Note that any dumplicated column headers will be modified to make them unique during a merge. <br><br>
+                              If no merged data appears in the 'Merged data' table, then an error has occured. Were shared IDs available between the numerical and metadata?" )) })
 
 
   output$table5 <- DT::renderDT(server = FALSE,{
