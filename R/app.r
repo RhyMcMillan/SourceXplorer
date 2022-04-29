@@ -17,6 +17,7 @@ SourceXplorer <- function (...) {
   library(ggfortify)
   library(leaflet)
   library(leaflet.extras)
+
   library(scales)
   library(lattice)
   library(plyr)
