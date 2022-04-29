@@ -172,8 +172,6 @@ mainPanel(
                                                                       div(style="margin-bottom:15px"),
                                                                         HTML("Upload your data, update the map, select your variables, and navigate through the tabs, above, to continue."),
                                                                         div(style="margin-bottom:15px"),
-                                                                        actionLink("quickstartHelp", "Click here for quickstart help and other helpful hints."),
-                                                                        div(style="margin-bottom:15px"),
                                                                         downloadLink("downloadtemplatesource", "Download Template: Sources"),
                                                                         div(style="margin-bottom:15px"),
                                                                         downloadLink("downloadtemplateunknown", "Download Template: Unknowns"),
@@ -328,20 +326,19 @@ server <- function(session, input, output) {
                 text = HTML( "Note that any incomplete rows will be removed prior to use in SourceXplorer. <br><br>
                               You can see your processed data in the 'Source Data (Live)' tab,
                               including all complete rows for sources within the map FOV.<br><br>
-                                If your data contains no complete rows (e.g., if you have an empty column in your data),
+                                If your data contains no complete rows (e.g., if you have an empty column in your data), no numeric variables, and/or no non-numeric (grouping or ID) variables,
                                 you will need to modify and restart before proceeding. <br><br>
                                 If you had already uploaded a file here, please restart before uploading another." )) })
 
   observe(if (!is.null(sourceIn())) {
 
-    sourceInnames <- sourceIn()[, !(names(sourceIn()) %in% names(sourceIn() %>% select_if(is.numeric)))]
+    sourceInnames <-  dplyr::select_if(sourceIn(), negate(is.numeric))
 
     updateSelectInput(session,
                       "sourceGrpVar",
                       choices = colnames(sourceInnames),
                       selected = c())
   })
-
 
 
   sitesInBounds1 <- eventReactive(input$sourceGrpVar,{
@@ -405,14 +402,14 @@ server <- function(session, input, output) {
 
   ###Upload Data###
   ###Unknowns###
-  dataIn0 <- reactive({
-    if (is.null(input$file2) ){
+  dataIn <- reactive({
+    if (is.null(input$file1) ){
       return(NULL)
     }
 
-    else if (!is.null(input$file2)){
-      validate(
-        need(!is.na(input$file1), "Standby, I'm thinking... Have you uploaded unknown data? If so, are all your rows complete?"))
+    else if (!is.null(input$file1)){
+      # validate(
+      #   need(!is.na(input$file1), "Standby, I'm thinking... Have you uploaded unknown data? If so, are all your rows complete?"))
 
     dataIn <- read.csv(input$file1$datapath, header=T, na.strings=c(""," ","NULL","na","NaN","Inf","NA"))
 
@@ -426,7 +423,7 @@ server <- function(session, input, output) {
   output$unknown.table <- DT::renderDataTable(server = FALSE,{
 
     validate(
-      need(!is.na(dataIn0()[1]), "Standby, I'm thinking... Have you uploaded unknown data?")
+      need(!is.na(dataIn()[1]), "Standby, I'm thinking... Have you uploaded unknown data?")
     )
 
     if (is.null(input$file1))
@@ -434,7 +431,7 @@ server <- function(session, input, output) {
 
     else if (!is.null(input$file1)){
 
-      return(dataIn0())
+      return(dataIn())
 
     }
   }, extensions = 'Buttons',
@@ -447,13 +444,13 @@ server <- function(session, input, output) {
                 text = HTML( "Note that any incomplete rows will be removed prior to use in SourceXplorer. <br><br>
                               You can see your processed data in the 'Unknown Data (Live)' tab,
                               including all rows passed to the statistical assessments.<br><br>
-                                If your data contains no complete rows (e.g., if you have an empty column in your data),
+                                If your data contains no complete rows (e.g., if you have an empty column in your data), no numeric variables, and/or no non-numeric (grouping or ID) variables,
                                 you will need to modify and restart before proceeding. <br><br>
                                 If you had already uploaded a file here, please restart before uploading another." ) ) })
 
-  observe(if (!is.null(dataIn0())) {
+  observe(if (!is.null(dataIn())) {
 
-    dataIn <- as.data.frame(dataIn0())
+    dataIn <- as.data.frame(dataIn())
     df2info <-  dplyr::select_if(dataIn, negate(is.numeric))
 
     updateSelectInput(session,
@@ -465,7 +462,6 @@ server <- function(session, input, output) {
                       choices = colnames(df2info),
                       selected = c())
   })
-
 
 
   map_clicks<-reactiveValues(Clicks=list())
@@ -750,7 +746,7 @@ server <- function(session, input, output) {
   })
 
   TEArtRed.transformedPCA <-  reactive({
-    TEArtRed.transformed1 <- dataIn0()[, input$varSelect]
+    TEArtRed.transformed1 <- dataIn()[, input$varSelect]
     TEArtRed.transformed <- na.omit(TEArtRed.transformed1)
     TEArtRed.transformed <- as.data.frame(TEArtRed.transformed)
     return(TEArtRed.transformed)
@@ -766,9 +762,9 @@ server <- function(session, input, output) {
 
   TEArtRed.transformed1 <-  reactive({
 
-    TEArtRed.transformed1 <- dataIn0()[, input$varSelect]
+    TEArtRed.transformed1 <- dataIn()[, input$varSelect]
 
-    TEArtRed.transformed1$shortName <- dataIn0()[, input$artIdVar]
+    TEArtRed.transformed1$shortName <- dataIn()[, input$artIdVar]
     TEArtRed.transformed1$shortName <-
       factor(TEArtRed.transformed1$shortName)
 
@@ -838,10 +834,6 @@ server <- function(session, input, output) {
     return(prediction.data.lda)
   })
 
-  dataIn <- reactive({
-    dataIn <- dataIn0()
-    return(dataIn)
-  })
 
   ###Assess LDA accuracy
   lda_accuracy <- reactive({
@@ -1096,7 +1088,7 @@ server <- function(session, input, output) {
 
       validate(
         need(!is.na(sitesInBounds()[1]), "Standby, I'm thinking... Where's your source data?"),
-        need(length(vars_selected())>1, "How many variables have you included? SourceXplorer requires at least two to make predictions.")
+        need(length(vars_selected())>1, "How many numeric variables have you included? SourceXplorer requires at least two.")
       )
 
       myplot <- ggplotly(Scatter,
@@ -1164,7 +1156,7 @@ server <- function(session, input, output) {
 
     validate(
       need(!is.na(sitesInBounds()[1]), "Standby, I'm thinking... Where's your source data?"),
-      need(length(vars_selected())>1, "How many variables have you included? SourceXplorer requires at least two to make predictions.")
+      need(length(vars_selected())>1, "How many numeric variables have you included? SourceXplorer requires at least two.")
     )
 
     ###Run PCA
@@ -1437,9 +1429,9 @@ server <- function(session, input, output) {
 
       validate(
         need(!is.na(sitesInBounds()[1]), "Standby, I'm thinking... Where's your source data?"),
-        need(length(unique(sitesInBounds()$shortName))>2, "How many sources have you included? SourceXplorer requires at least three to make predictions to make predictions."),
+        need(length(unique(sitesInBounds()$shortName))>2, "How many sources have you included? SourceXplorer requires at least three to make predictions."),
         need(length(sitesInBounds()$shortName)>9, "How many observations have you included? SourceXplorer requires at least 10 for LDA."),
-        need(length(vars_selected())>1, "How many variables have you included? SourceXplorer requires at least two to make predictions.")
+        need(length(vars_selected())>1, "How many numeric variables have you included? SourceXplorer requires at least two.")
       )
 
       ###LDA data
@@ -1844,8 +1836,8 @@ server <- function(session, input, output) {
       validate(
         need(!is.na(sitesInBounds()[1]), "Standby, I'm thinking... Where's your source data?"),
         need(!is.na(input$file1), "Standby, I'm thinking... Have you uploaded unknowns?"),
-        need(length(unique(sitesInBounds()$shortName))>2, "How many sources have you included? SourceXplorer requires at least three to make predictions to make predictions."),
-        need(length(vars_selected())>1, "How many variables have you included? SourceXplorer requires at least two to make predictions.")
+        need(length(unique(sitesInBounds()$shortName))>2, "How many sources have you included? SourceXplorer requires at least three to make predictions."),
+        need(length(vars_selected())>1, "How many numeric variables have you included? SourceXplorer requires at least two.")
       )
 
       if (is.null(input$file1))
@@ -2046,8 +2038,8 @@ server <- function(session, input, output) {
     validate(
       need(!is.na(sitesInBounds()[1]), "Standby, I'm thinking... Where's your source data?"),
       need(!is.na(input$file1), "Standby, I'm thinking... Have you uploaded unknowns?"),
-      need(length(unique(sitesInBounds()$shortName))>2, "How many sources have you included? SourceXplorer requires at least three to make predictions to make predictions."),
-      need(length(vars_selected())>1, "How many variables have you included? SourceXplorer requires at least two to make predictions.")
+      need(length(unique(sitesInBounds()$shortName))>2, "How many sources have you included? SourceXplorer requires at least three to make predictions."),
+      need(length(vars_selected())>1, "How many numeric variables have you included? SourceXplorer requires at least two.")
     )
 
     if (is.null(input$file1))
@@ -2072,7 +2064,7 @@ server <- function(session, input, output) {
       need(!is.na(sitesInBounds()[1]), "Standby, I'm thinking... Where's your source data?"),
       need(!is.na(input$file1), "Standby, I'm thinking... Have you uploaded unknowns?"),
       need(length(unique(sitesInBounds()$shortName))>2, "How many sources have you included? SourceXplorer requires at least three to make predictions."),
-      need(length(vars_selected())>1, "How many variables have you included? SourceXplorer requires at least two to make predictions.")
+      need(length(vars_selected())>1, "How many numeric variables have you included? SourceXplorer requires at least two.")
     )
 
     if (is.null(input$file1))
@@ -2105,7 +2097,7 @@ server <- function(session, input, output) {
       need(!is.na(sitesInBounds()[1]), "Standby, I'm thinking... Where's your source data?"),
       need(!is.na(input$file1), "Standby, I'm thinking... Have you uploaded unknowns?"),
       need(length(unique(sitesInBounds()$shortName))>2, "How many sources have you included? SourceXplorer requires at least three to make predictions."),
-      need(length(vars_selected())>1, "How many variables have you included? SourceXplorer requires at least two to make predictions.")
+      need(length(vars_selected())>1, "How many numeric variables have you included? SourceXplorer requires at least two.")
     )
 
     bar <- ggplot(summary.table(), aes(summary.table()[, input$prov_level]))
