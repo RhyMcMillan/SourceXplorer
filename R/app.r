@@ -1,54 +1,53 @@
 #' SourceXplorer
 #'
-#' @param ...
+#' @param SourceXplorer() Initialize SourceXplorer Application.
 #'
 #' @return
 #' @export
 #'
 #' @examples
+#'
+#' SourceXplorer()
 SourceXplorer <- function (...) {
-library(shiny)
-library(rsconnect)
-library(tidyr)
-library(ggplot2)
-library(plotly)
-library(ggfortify)
-library(leaflet)
-library(leaflet.extras)
-library(scales)
-library(lattice)
-library(plyr)
-library(dplyr)
-library(DT)
-library(MASS)
-library(caret)
-library(stringr)
-library(htmltools)
-library(RColorBrewer)
-library(readxl)
-library(svglite)
-library(ggiraph)
-library(ggrepel)
-library(shinythemes)
-library(mapview)
-library(ggcorrplot)
-library(rcompanion)
-library(DescTools)
-library(cowplot)
-library(shinyWidgets)
-library(janitor)
-library(ggpubr)
-library(sp)
-library(openxlsx)
-library(shinyalert)
-
-####SETUP AND SOURCE DATA LOADING####
-
+  library(shiny)
+  library(rsconnect)
+  library(tidyr)
+  library(ggplot2)
+  library(plotly)
+  library(ggfortify)
+  library(leaflet)
+  library(leaflet.extras)
+  library(scales)
+  library(lattice)
+  library(plyr)
+  library(dplyr)
+  library(DT)
+  library(MASS)
+  library(caret)
+  library(stringr)
+  library(htmltools)
+  library(RColorBrewer)
+  library(readxl)
+  library(svglite)
+  library(ggiraph)
+  library(ggrepel)
+  library(shinythemes)
+  library(mapview)
+  library(ggcorrplot)
+  library(rcompanion)
+  library(DescTools)
+  library(cowplot)
+  library(shinyWidgets)
+  library(janitor)
+  library(ggpubr)
+  library(sp)
+  library(openxlsx)
+  library(shinyalert)
+  library(tidyverse)
 
 ####UI####
 ui <- fluidPage(
   theme = shinytheme("sandstone"), #https://rstudio.github.io/shinythemes/
-
                 h1(strong("SourceXplorer"), style = "font-size:40px;"),
 
 ####sidebar####
@@ -110,7 +109,7 @@ ui <- fluidPage(
     div(style="margin-bottom:15px"),
 
 
-
+####Conditional Panels####
       conditionalPanel(
         condition = "input.tabselected == 2",
         selectInput("saveFormatLDA", "Save file format", choices=c("svg","png","pdf")),
@@ -317,9 +316,6 @@ server <- function(session, input, output) {
     }
 
   })
-
-
-
 
   observeEvent(input$file2, {
     shinyalert( html = TRUE, title = "Source Data Uploaded.",
@@ -773,8 +769,6 @@ server <- function(session, input, output) {
 
   })
 
-
-
   ##Transform data for LDA (caret)
   TESources.transformed <- reactive({
     TESources.transformed1 <-TESources.transformed1()
@@ -1150,8 +1144,6 @@ server <- function(session, input, output) {
   })
 
   ####PCA####
-
-
   output$PCA <- renderPlotly({
 
     validate(
@@ -1826,10 +1818,7 @@ server <- function(session, input, output) {
 
         )
 
-
-
-
-    ####Summary Table (All)####NEWWWWWWWW
+    ####Summary Table (All)
 
     summary.table <- reactive({
 
@@ -1851,9 +1840,6 @@ server <- function(session, input, output) {
         probs <-  prediction.table()%>%
           dplyr::select(source_groups)
 
-
-
-
         prediction.table$LDAprob <- do.call(pmax, probs)
 
         prediction.table$LDAprob <- (prediction.table$LDAprob)*100
@@ -1869,8 +1855,6 @@ server <- function(session, input, output) {
                           "in.hull.lda",
                           "in.ell.pca",
                           "in.hull.pca"))
-
-
 
         prediction.table$LDAacc <- (lda_accuracy())*100
 
@@ -1904,10 +1888,6 @@ server <- function(session, input, output) {
         prediction.table <- prediction.table %>%
           mutate(in.hull.lda.result = ifelse(str_detect(in.hull.lda, 'FALSE'),
                                             "Outside of LDA Convex Hull", "Within LDA Convex Hull"))
-
-
-
-
 
         ###Shared Basic and Standard
         prediction.table <- prediction.table %>%
@@ -2030,9 +2010,6 @@ server <- function(session, input, output) {
       }
     })
 
-
-
-
   output$summary.table <- DT::renderDataTable(server = FALSE,{
 
     validate(
@@ -2054,7 +2031,6 @@ server <- function(session, input, output) {
   options = list(dom = 'Bfrtip',
                  buttons = c('copy', 'csv', 'pdf', 'print'), pageLength = 25)
   )
-
 
   ###Summary Table (Tabulated)
 
@@ -2087,8 +2063,6 @@ server <- function(session, input, output) {
   options = list(dom = 'Bfrtip',
                  buttons = c('copy', 'csv', 'pdf', 'print'), pageLength = 25)
   )
-
-
 
   #####Bar Plot#####
   output$barplot <- renderPlot({
