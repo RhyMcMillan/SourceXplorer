@@ -454,7 +454,7 @@ server <- function(session, input, output) {
   observe(if (!is.null(dataIn0())) {
 
     dataIn <- as.data.frame(dataIn0())
-    df2info <-  dataIn[, !(names(dataIn) %in% names(dataIn %>% select_if(is.numeric)))]
+    df2info <-  dplyr::select_if(dataIn, negate(is.numeric))
 
     updateSelectInput(session,
                       "artGrpVar",
