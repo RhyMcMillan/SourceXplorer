@@ -245,7 +245,7 @@ server <- function(session, input, output) {
        Use the 'User Source Grouping Variable' pulldown menu to select the field with your geological source name(s) from any non-numeric column.
        Load your archaeological sample data using the 'Upload CSV: User Unknowns' button.<br><br>
        Use the 'User Unknown Grouping Variable' pulldown menu to select your grouping variable (i.e. site, artifact type, etc.) from any non-numeric column.<br><br>
-       Use the 'User Unknown ID Variable' pulldown menu to select the unique identifier field for your data (e.g., sample ID or artifact number) from any non-numeric columnb.<br><br>
+       Use the 'User Unknown ID Variable' pulldown menu to select the unique identifier field for your data (e.g., sample ID or artifact number) from any non-numeric column.<br><br>
        Move the map view and zoom in or out to include/exclude sources from the plots and models.
        You can also exclude sources by clicking the markers on the map, and include them again using the buttons on the map interface (if the sources are still within the map FOV).
        <b> Only sources within the map field of view will be included in the plots and tests!</b><br><br>
