@@ -2,14 +2,15 @@ citHeader("To cite SourceXplorer in publications use:")
 
 citEntry(
   entry    = "Article",
-  title    = "SourceXplorer: a graphical user interface for guided archaeological lithic source investigations",
-  author   = as.person(c("Rhy McMillan", "Nicholas Waber")),
-  journal  = ,
-  year     = ,
-  volume   = ,
-  number   = ,
+  title    = "Introducing SourceXplorer, an open-source statistical tool for guided
+lithic sourcing",
+  author   = as.person(c("Rhy McMillan", "Nicholas Waber", "Morgan Ritchie", "Ellery Frahm")),
+  journal  = "Journal of Archaeological Science",
+  year     = "2022",
+  volume   = "144",
+  number   = "105626",
   pages    = ,
-  url      = "https://github.com/RhyMcMillan/SourceXplorer",
+  url      = "https://doi.org/10.1016/j.jas.2022.105626",
   textVersion = paste(
 
   )
